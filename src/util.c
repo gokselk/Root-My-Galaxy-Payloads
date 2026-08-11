@@ -520,7 +520,9 @@ uintptr_t p0_alias_image_offset(uintptr_t data_alias) {
 }
 
 uintptr_t data_addr(uintptr_t image_addr) {
-#if defined(APP_NO_PHYS_KASLR) && APP_NO_PHYS_KASLR
+#if defined(APP_FOPS_WRITE_KIMAGE) && APP_FOPS_WRITE_KIMAGE
+  return text_addr(image_addr);
+#elif defined(APP_NO_PHYS_KASLR) && APP_NO_PHYS_KASLR
   return p0_data_alias(image_addr);
 #elif defined(APP_REQUIRE_FRESH_P0_SESSION) && APP_REQUIRE_FRESH_P0_SESSION
   uintptr_t address = p0_data_alias(image_addr);
